@@ -1,0 +1,19 @@
+{
+  "resource_id": "engine1-resource-id",
+  "source_url": "https://example.invalid/material.pdf",
+  "source_type": "pdf",
+  "source_domain": "example.invalid",
+  "content_reference": "/path/to/validated/source.pdf",
+  "sha256": "sha256-of-immutable-bytes",
+  "byte_size": 123456,
+  "mime_type": "application/pdf",
+  "validation_status": "valid",
+  "resource_state": "complete",
+  "exam_hint": "TNPSC_GROUP_2",
+  "is_pyq": false,
+  "is_mock": false,
+  "is_current_affair": false,
+  "is_government_material": true,
+  "publication_date": "2026-01-01",
+  "content_year": 2026
+}
