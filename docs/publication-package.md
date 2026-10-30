@@ -8,6 +8,21 @@ The Content Intelligence Engine publishes approved lessons and MCQs through a de
 
 The engine does not write directly to the learner-facing platform database.
 
+## Platform topic mapping
+
+The platform owns its real topic IDs. Before generating a publication package, an authorized admin can export the platform mapping from:
+
+`GET /api/admin/content-engine/topic-map`
+
+The export contains the real `topic_id`, topic name, chapter, and subject identifiers. The engine consumes that export and an explicit mapping of `curriculum_node_id → topic_id`.
+
+Rules:
+
+- Never invent a platform topic ID.
+- Never silently map a missing curriculum node.
+- Never collapse two engine curriculum nodes into one platform topic unless the mapping contract explicitly permits that relationship; the current validator fails closed on collisions.
+- If the platform syllabus changes, export a fresh map before producing a new publication.
+
 ## Contract
 
 The package shape is:
