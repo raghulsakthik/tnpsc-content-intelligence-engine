@@ -1,13 +1,4 @@
-"""Build a safe import payload for the existing Yash TNPSC platform.
-
-The platform currently stores one primary lesson per topic and questions as
-rows in ``question``.  The intelligence engine may contain multiple lessons
-per topic, so this adapter never silently drops them: it selects an explicit
-primary lesson and reports additional lessons as review-required items.
-
-This module only transforms already-approved engine objects. It performs no
-HTTP requests, database writes, approval, or publication.
-"""
+"""Build a safe import payload for the existing Yash TNPSC platform."""
 
 from __future__ import annotations
 
@@ -42,97 +33,52 @@ class PlatformImportPlan:
 
 def _manifest_hash(publication_id: str, items: Iterable[PlatformImportItem]) -> str:
     canonical = [
-        {
-            "kind": item.kind,
-            "content_id": item.content_id,
-            "topic_id": item.topic_id,
-            "payload": item.payload,
-        }
-        for item in items
+        {"kind": i.kind, "content_id": i.content_id, "topic_id": i.topic_id, "payload": i.payload}
+        for i in items
     ]
-    raw = json.dumps(
-        {"publication_id": publication_id, "items": canonical},
-        sort_keys=True,
-        separators=(",", ":"),
-        ensure_ascii=False,
-    )
+    raw = json.dumps({"publication_id": publication_id, "items": canonical}, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
     return sha256(raw.encode("utf-8")).hexdigest()
 
 
-def build_import_plan(
-    *,
-    publication_id: str,
-    lessons: Iterable[Lesson],
-    mcqs: Iterable[MCQ],
-) -> PlatformImportPlan:
-    """Create a deterministic import plan from approved engine content.
-
-    PYQ content is rejected. Unapproved content is rejected. Multiple
-    approved lessons for one topic are reported rather than silently lost.
-    """
-    approved_lessons = [lesson for lesson in lessons if lesson.status == LessonStatus.APPROVED]
-    approved_mcqs = [mcq for mcq in mcqs if mcq.status == MCQStatus.APPROVED]
-
+def build_import_plan(*, publication_id: str, lessons: Iterable[Lesson], mcqs: Iterable[MCQ]) -> PlatformImportPlan:
+    """Create a deterministic import plan from approved engine content."""
+    approved_lessons = [x for x in lessons if x.status == LessonStatus.APPROVED]
+    approved_mcqs = [x for x in mcqs if x.status == MCQStatus.APPROVED]
     review: list[str] = []
     items: list[PlatformImportItem] = []
 
     lesson_by_topic: dict[str, list[Lesson]] = {}
     for lesson in approved_lessons:
         lesson_by_topic.setdefault(lesson.curriculum_node_id, []).append(lesson)
-
     for topic_id, topic_lessons in sorted(lesson_by_topic.items()):
         if len(topic_lessons) > 1:
             review.append(f"multiple-approved-lessons:{topic_id}")
             continue
         lesson = topic_lessons[0]
-        items.append(
-            PlatformImportItem(
-                kind="lesson",
-                content_id=lesson.lesson_id,
-                topic_id=topic_id,
-                payload={
-                    "title": lesson.title,
-                    "concept": lesson.concept,
-                    "definition": lesson.definition,
-                    "explanation": lesson.explanation,
-                    "examples": list(lesson.examples),
-                    "revisionNotes": list(lesson.revision_notes),
-                    "sourceIds": list(lesson.source_ids),
-                    "version": lesson.version,
-                },
-            )
-        )
+        items.append(PlatformImportItem("lesson", lesson.lesson_id, topic_id, {
+            "title": lesson.title, "concept": lesson.concept, "definition": lesson.definition,
+            "explanation": lesson.explanation, "examples": list(lesson.examples),
+            "revisionNotes": list(lesson.revision_notes), "sourceIds": list(lesson.source_ids),
+            "version": lesson.version,
+        }))
 
     for mcq in sorted(approved_mcqs, key=lambda value: value.mcq_id):
-        # The MCQ model carries the hard PYQ gate. Keep the adapter defensive
-        # because this is the last boundary before platform persistence.
-        if getattr(mcq, "is_pyq", False) or str(getattr(mcq, "generation_source", "")).lower() == "pyq":
+        if mcq.is_pyq or mcq.status == MCQStatus.EXCLUDED_PYQ:
             review.append(f"pyq-block:{mcq.mcq_id}")
             continue
-        if not mcq.source_ids:
+        if not mcq.source_evidence_ids:
             review.append(f"missing-provenance:{mcq.mcq_id}")
             continue
-        items.append(
-            PlatformImportItem(
-                kind="mcq",
-                content_id=mcq.mcq_id,
-                topic_id=mcq.curriculum_node_id,
-                payload={
-                    "question": mcq.question,
-                    "options": list(mcq.options),
-                    "answerIndex": mcq.answer_index,
-                    "explanation": mcq.explanation,
-                    "difficulty": mcq.difficulty.value,
-                    "sourceIds": list(mcq.source_ids),
-                    "version": mcq.version,
-                },
-            )
-        )
+        correct = tuple(i for i, option in enumerate(mcq.options) if option.is_correct)
+        if len(correct) != 1:
+            review.append(f"invalid-answer-cardinality:{mcq.mcq_id}")
+            continue
+        items.append(PlatformImportItem("mcq", mcq.mcq_id, mcq.curriculum_node_id, {
+            "question": mcq.question, "options": [x.text for x in mcq.options],
+            "answerIndex": correct[0], "explanation": mcq.explanation,
+            "difficulty": mcq.difficulty.value, "sourceIds": list(mcq.source_evidence_ids),
+            "version": mcq.version,
+        }))
 
-    items_tuple = tuple(items)
-    return PlatformImportPlan(
-        publication_id=publication_id,
-        manifest_hash=_manifest_hash(publication_id, items_tuple),
-        items=items_tuple,
-        review_required=tuple(sorted(set(review))),
-    )
+    result = tuple(items)
+    return PlatformImportPlan(publication_id, _manifest_hash(publication_id, result), result, tuple(sorted(set(review))))
