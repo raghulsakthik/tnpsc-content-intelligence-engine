@@ -1,5 +1,6 @@
 import hashlib
 import json
+from dataclasses import replace
 
 import pytest
 
@@ -13,27 +14,14 @@ from engine.lessons.models import LessonStatus
 from engine.mcq.models import Difficulty, MCQ, MCQOption, MCQStatus
 
 
-def approved_lesson():
-    lesson = build_lesson(
-        curriculum_node_id="aptitude.fractions",
-        title="Fractions",
-        concept="Parts of a whole",
-        definition="A fraction represents a part of a whole.",
-        explanation="The numerator counts selected parts and the denominator counts equal parts.",
-        source_ids=["evidence-1"],
-    )
-    return LessonStatus, lesson.__class__(**{**lesson.__dict__}) if False else lesson
-
-
 def test_publication_package_matches_platform_hash_contract():
-    lesson = build_lesson(
-        curriculum_node_id="aptitude.fractions",
-        title="Fractions",
-        concept="Parts of a whole",
-        source_ids=["evidence-1"],
-    )
-    lesson = lesson.__class__(
-        **{field: getattr(lesson, field) for field in lesson.__dataclass_fields__},
+    lesson = replace(
+        build_lesson(
+            curriculum_node_id="aptitude.fractions",
+            title="Fractions",
+            concept="Parts of a whole",
+            source_ids=["evidence-1"],
+        ),
         status=LessonStatus.APPROVED,
     )
     package = build_publication_package(
@@ -65,11 +53,14 @@ def test_publication_package_matches_platform_hash_contract():
 
 
 def test_missing_topic_mapping_fails_closed():
-    lesson = build_lesson(
-        curriculum_node_id="history.chola",
-        title="Chola Administration",
-        concept="Administration",
-        source_ids=["evidence-2"],
+    lesson = replace(
+        build_lesson(
+            curriculum_node_id="history.chola",
+            title="Chola Administration",
+            concept="Administration",
+            source_ids=["evidence-2"],
+        ),
+        status=LessonStatus.APPROVED,
     )
     with pytest.raises(PublicationContractError, match="missing-platform-topic"):
         build_publication_package(
