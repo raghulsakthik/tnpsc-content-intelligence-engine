@@ -30,7 +30,7 @@ class CorpusProcessor:
     @staticmethod
     def manifest(batch_id: str, items: Iterable[BatchItem], created_at: str) -> BatchManifest:
         ordered = tuple(sorted(items, key=lambda item: item.item_id))
-        payload = "\\n".join(f"{i.item_id}|{i.resource_id}|{i.sha256}" for i in ordered)
+        payload = "\n".join(f"{i.item_id}|{i.resource_id}|{i.sha256}" for i in ordered)
         digest = hashlib.sha256(payload.encode("utf-8")).hexdigest()
         return BatchManifest(
             batch_id=batch_id,
