@@ -27,12 +27,12 @@ class CleaningResult:
 
 
 def _normalize_line(line: str) -> str:
-    return re.sub(r"[ \\t]+", " ", line.strip())
+    return re.sub(r"[ \t]+", " ", line.strip())
 
 
 def _is_page_number(line: str) -> bool:
     value = line.strip().lower()
-    return bool(re.fullmatch(r"(?:page\\s*)?\\d{1,4}(?:\\s*(?:of|/|-)\\s*\\d{1,4})?", value))
+    return bool(re.fullmatch(r"(?:page\s*)?\d{1,4}(?:\s*(?:of|/|-)\s*\d{1,4})?", value))
 
 
 def _common_edge_lines(pages: list[list[str]], threshold: float) -> set[str]:
@@ -83,11 +83,11 @@ def clean_document(pages: Iterable[str], config: CleaningConfig | None = None) -
                 continue
             output.append(line)
 
-        text = "\\n".join(output)
+        text = "\n".join(output)
         if cfg.collapse_whitespace:
-            text = re.sub(r"\\n{3,}", "\\n\\n", text).strip()
+            text = re.sub(r"\n{3,}", "\n\n", text).strip()
         cleaned.append(text)
-        if text != "\\n".join(lines).strip():
+        if text != "\n".join(lines).strip():
             changed += 1
 
     warnings: list[str] = []
