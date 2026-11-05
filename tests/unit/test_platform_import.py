@@ -43,3 +43,13 @@ def test_multiple_lessons_for_single_platform_topic_require_review():
     plan = build_import_plan(publication_id="pub-1", lessons=[lesson("aptitude.fractions", "lesson-1"), lesson("aptitude.fractions", "lesson-2")], mcqs=[])
     assert not plan.is_safe_to_send
     assert "multiple-approved-lessons:aptitude.fractions" in plan.review_required
+
+
+def test_unknown_platform_topic_is_blocked():
+    plan = build_import_plan(
+        publication_id="pub-unknown",
+        lessons=[lesson("not-a-real-platform-topic")],
+        mcqs=[],
+    )
+    assert not plan.is_safe_to_send
+    assert any(item.startswith("unknown-platform-topic:") for item in plan.review_required)

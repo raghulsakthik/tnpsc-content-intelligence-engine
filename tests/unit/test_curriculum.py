@@ -6,16 +6,17 @@ from engine.curriculum.taxonomy import CURRICULUM, SUBJECTS, general_studies_uni
 
 
 def test_curriculum_version_is_explicitly_versioned():
-    assert CURRICULUM.id == "tnpsc-group-2-2a-2022-v1"
+    assert CURRICULUM.id == "tnpsc-prelims-495"
     assert CURRICULUM.status is CurriculumStatus.ACTIVE
-    assert CURRICULUM.effective_from == date(2022, 1, 27)
+    assert CURRICULUM.effective_from == date(2024, 12, 12)
 
 
 def test_subjects_have_stable_canonical_keys():
     keys = {node.canonical_key for node in SUBJECTS}
     assert "general-studies" in keys
     assert "aptitude-mental-ability" in keys
-    assert "general-tamil" in keys
+    assert "language-ta" in keys
+    assert "language-en" in keys
     assert len(keys) == len(SUBJECTS)
 
 
@@ -40,3 +41,19 @@ def test_exact_mapping_is_deterministic_and_does_not_fuzzy_publish():
     )
     assert candidate_nodes("general studies", (node,))[0].score == 1.0
     assert candidate_nodes("general science", (node,)) == ()
+
+
+def test_platform_manifest_topic_ids_match_prelims_and_mains():
+    from engine.curriculum.taxonomy import CURRICULUM_MAINS_583, NODES, TOPIC_IDS, get_topic_ids
+    assert CURRICULUM_MAINS_583.id == "tnpsc-group-2a-mains-583"
+    assert "polity.fundamental-rights" in TOPIC_IDS
+    assert "mains583.governance.union-state-ut" in TOPIC_IDS
+    assert len(get_topic_ids("tnpsc-prelims-495")) > 0
+    assert len(get_topic_ids("tnpsc-group-2a-mains-583")) > 0
+    assert all(node.parent_id is None or any(parent.id == node.parent_id for parent in NODES) for node in NODES)
+
+
+def test_platform_manifest_has_no_duplicate_node_ids():
+    from engine.curriculum.taxonomy import NODES
+    ids = [node.id for node in NODES]
+    assert len(ids) == len(set(ids))

@@ -46,7 +46,8 @@ class CorpusProcessor:
             return current
 
         start_index = 0
-        if current.stage:
+        # "registration" is the initial checkpoint before any stage runs.
+        if current.stage and current.stage != "registration":
             for index, (name, _) in enumerate(self._stages):
                 if name == current.stage:
                     start_index = index
