@@ -27,20 +27,27 @@ class CleaningResult:
 
 
 def _normalize_line(line: str) -> str:
-    return re.sub(r"[ \t]+", " ", line.strip())
+    return re.sub(r"[ \\t]+", " ", line.strip())
 
 
 def _is_page_number(line: str) -> bool:
     value = line.strip().lower()
-    return bool(re.fullmatch(r"(?:page\s*)?\d{1,4}(?:\s*(?:of|/|-)\s*\d{1,4})?", value))
+    return bool(re.fullmatch(r"(?:page\\s*)?\\d{1,4}(?:\\s*(?:of|/|-)\\s*\\d{1,4})?", value))
 
 
 def _common_edge_lines(pages: list[list[str]], threshold: float) -> set[str]:
+    """Find repeated outermost header/footer lines, not repeated content.
+
+    Looking at the first/last three lines of every page incorrectly removes
+    recurring section headings (for example, "Science") that sit just below
+    a running document header. Restrict candidates to the actual outer edge;
+    page-number removal remains a separate explicit rule.
+    """
     if len(pages) < 2:
         return set()
     counts: dict[str, int] = {}
     for lines in pages:
-        seen = set(lines[:3] + lines[-3:])
+        seen = {lines[0], lines[-1]} if lines else set()
         for line in seen:
             if line:
                 counts[line] = counts.get(line, 0) + 1
@@ -76,11 +83,11 @@ def clean_document(pages: Iterable[str], config: CleaningConfig | None = None) -
                 continue
             output.append(line)
 
-        text = "\n".join(output)
+        text = "\\n".join(output)
         if cfg.collapse_whitespace:
-            text = re.sub(r"\n{3,}", "\n\n", text).strip()
+            text = re.sub(r"\\n{3,}", "\\n\\n", text).strip()
         cleaned.append(text)
-        if text != "\n".join(lines).strip():
+        if text != "\\n".join(lines).strip():
             changed += 1
 
     warnings: list[str] = []
