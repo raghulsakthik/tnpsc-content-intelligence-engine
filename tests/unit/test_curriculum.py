@@ -6,16 +6,17 @@ from engine.curriculum.taxonomy import CURRICULUM, SUBJECTS, general_studies_uni
 
 
 def test_curriculum_version_is_explicitly_versioned():
-    assert CURRICULUM.id == "tnpsc-group-2-2a-2022-v1"
+    assert CURRICULUM.id == "tnpsc-prelims-495"
     assert CURRICULUM.status is CurriculumStatus.ACTIVE
-    assert CURRICULUM.effective_from == date(2022, 1, 27)
+    assert CURRICULUM.effective_from == date(2024, 12, 12)
 
 
 def test_subjects_have_stable_canonical_keys():
     keys = {node.canonical_key for node in SUBJECTS}
     assert "general-studies" in keys
     assert "aptitude-mental-ability" in keys
-    assert "general-tamil" in keys
+    assert "language-ta" in keys
+    assert "language-en" in keys
     assert len(keys) == len(SUBJECTS)
 
 
