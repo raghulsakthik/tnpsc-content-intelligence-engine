@@ -40,7 +40,9 @@ def _common_edge_lines(pages: list[list[str]], threshold: float) -> set[str]:
         return set()
     counts: dict[str, int] = {}
     for lines in pages:
-        seen = set(lines[:3] + lines[-3:])
+        # Only the outermost line can be a running header/footer. Lines
+        # just below it may be repeated section headings and must survive.
+        seen = {lines[0], lines[-1]} if lines else set()
         for line in seen:
             if line:
                 counts[line] = counts.get(line, 0) + 1
