@@ -7,6 +7,7 @@ from hashlib import sha256
 import json
 from typing import Iterable
 
+from engine.curriculum.taxonomy import TOPIC_IDS
 from engine.lessons.models import Lesson, LessonStatus
 from engine.mcq.models import MCQ, MCQStatus
 
@@ -41,7 +42,7 @@ def _manifest_hash(publication_id: str, items: Iterable[PlatformImportItem]) -> 
 
 
 def build_import_plan(*, publication_id: str, lessons: Iterable[Lesson], mcqs: Iterable[MCQ]) -> PlatformImportPlan:
-    """Create a deterministic import plan from approved engine content."""
+    """Create a deterministic import plan using only canonical platform topic IDs."""
     approved_lessons = [x for x in lessons if x.status == LessonStatus.APPROVED]
     approved_mcqs = [x for x in mcqs if x.status == MCQStatus.APPROVED]
     review: list[str] = []
@@ -49,7 +50,11 @@ def build_import_plan(*, publication_id: str, lessons: Iterable[Lesson], mcqs: I
 
     lesson_by_topic: dict[str, list[Lesson]] = {}
     for lesson in approved_lessons:
+        if lesson.curriculum_node_id not in TOPIC_IDS:
+            review.append(f"unknown-platform-topic:{lesson.lesson_id}:{lesson.curriculum_node_id}")
+            continue
         lesson_by_topic.setdefault(lesson.curriculum_node_id, []).append(lesson)
+
     for topic_id, topic_lessons in sorted(lesson_by_topic.items()):
         if len(topic_lessons) > 1:
             review.append(f"multiple-approved-lessons:{topic_id}")
@@ -63,6 +68,9 @@ def build_import_plan(*, publication_id: str, lessons: Iterable[Lesson], mcqs: I
         }))
 
     for mcq in sorted(approved_mcqs, key=lambda value: value.mcq_id):
+        if mcq.curriculum_node_id not in TOPIC_IDS:
+            review.append(f"unknown-platform-topic:{mcq.mcq_id}:{mcq.curriculum_node_id}")
+            continue
         if mcq.is_pyq or mcq.status == MCQStatus.EXCLUDED_PYQ:
             review.append(f"pyq-block:{mcq.mcq_id}")
             continue
