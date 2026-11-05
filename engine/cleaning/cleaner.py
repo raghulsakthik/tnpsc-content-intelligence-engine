@@ -36,11 +36,18 @@ def _is_page_number(line: str) -> bool:
 
 
 def _common_edge_lines(pages: list[list[str]], threshold: float) -> set[str]:
+    """Find repeated outermost header/footer lines, not repeated content.
+
+    Looking at the first/last three lines of every page incorrectly removes
+    recurring section headings (for example, "Science") that sit just below
+    a running document header. Restrict candidates to the actual outer edge;
+    page-number removal remains a separate explicit rule.
+    """
     if len(pages) < 2:
         return set()
     counts: dict[str, int] = {}
     for lines in pages:
-        seen = set(lines[:3] + lines[-3:])
+        seen = {lines[0], lines[-1]} if lines else set()
         for line in seen:
             if line:
                 counts[line] = counts.get(line, 0) + 1

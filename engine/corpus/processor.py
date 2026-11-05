@@ -45,8 +45,10 @@ class CorpusProcessor:
         if current.status == ItemStatus.COMPLETE:
             return current
 
+        # "registration" is the initial, pre-stage checkpoint used by
+        # BatchItem's default value. It means no processing stage has run yet.
         start_index = 0
-        if current.stage:
+        if current.stage and current.stage != "registration":
             for index, (name, _) in enumerate(self._stages):
                 if name == current.stage:
                     start_index = index
