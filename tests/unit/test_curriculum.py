@@ -40,3 +40,19 @@ def test_exact_mapping_is_deterministic_and_does_not_fuzzy_publish():
     )
     assert candidate_nodes("general studies", (node,))[0].score == 1.0
     assert candidate_nodes("general science", (node,)) == ()
+
+
+def test_platform_manifest_topic_ids_match_prelims_and_mains():
+    from engine.curriculum.taxonomy import CURRICULUM_MAINS_583, NODES, TOPIC_IDS, get_topic_ids
+    assert CURRICULUM_MAINS_583.id == "tnpsc-group-2a-mains-583"
+    assert "polity.fundamental-rights" in TOPIC_IDS
+    assert "mains583.governance.union-state-ut" in TOPIC_IDS
+    assert len(get_topic_ids("tnpsc-prelims-495")) > 0
+    assert len(get_topic_ids("tnpsc-group-2a-mains-583")) > 0
+    assert all(node.parent_id is None or any(parent.id == node.parent_id for parent in NODES) for node in NODES)
+
+
+def test_platform_manifest_has_no_duplicate_node_ids():
+    from engine.curriculum.taxonomy import NODES
+    ids = [node.id for node in NODES]
+    assert len(ids) == len(set(ids))
